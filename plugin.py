@@ -97,7 +97,12 @@ class PulsebarPlugin(WAN2GPPlugin):
                 value=status_path,
                 interactive=False,
             )
-            status_preview = gr.JSON(label="Current status", value=self._read_status_file())
+            status_preview = gr.Textbox(
+                label="Current status",
+                value=self._format_status_preview(),
+                lines=12,
+                interactive=False,
+            )
             output = gr.Markdown(value=self._build_status_text(settings))
 
             with gr.Row():
@@ -118,14 +123,14 @@ class PulsebarPlugin(WAN2GPPlugin):
                         stage="idle",
                         message="Wan2GP idle",
                     )
-                return self._build_status_text(new_settings), self._read_status_file()
+                return self._build_status_text(new_settings), self._format_status_preview()
 
             def launch_bar():
                 ok, message = self._launch_bar()
-                return message, self._read_status_file()
+                return message, self._format_status_preview()
 
             def refresh_status():
-                return self._read_status_file()
+                return self._format_status_preview()
 
             def reset_status():
                 self._write_status(
@@ -134,7 +139,7 @@ class PulsebarPlugin(WAN2GPPlugin):
                     stage="idle",
                     message="Wan2GP idle",
                 )
-                return self._read_status_file()
+                return self._format_status_preview()
 
             save_btn.click(
                 fn=save_config,
@@ -482,6 +487,12 @@ class PulsebarPlugin(WAN2GPPlugin):
                 return json.load(handle)
         except Exception:
             return {}
+
+    def _format_status_preview(self):
+        status = self._read_status_file()
+        if not status:
+            return "No status file found yet."
+        return json.dumps(status, indent=2, ensure_ascii=False)
 
     def _launch_bar(self):
         if os.name != "nt":
