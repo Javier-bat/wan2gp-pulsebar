@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+*.tmp
+
+# .NET build outputs
+desktop/bin/
+desktop/obj/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+

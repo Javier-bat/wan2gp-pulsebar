@@ -1,0 +1,14 @@
+{
+  "state": "idle",
+  "task_id": null,
+  "percent": 0,
+  "stage": "idle",
+  "message": "Wan2GP idle",
+  "queue": {
+    "current": null,
+    "total": null,
+    "remaining": null
+  },
+  "updated_at": null
+}
+
