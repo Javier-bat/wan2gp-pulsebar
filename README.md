@@ -5,6 +5,7 @@ Floating Windows progress bar for Wan2GP generations.
 ## What it does
 
 - Hooks Wan2GP generation progress without changing the generation flow.
+- Supports both newer `generate_media` and older `generate_video` Wan2GP builds.
 - Writes a tiny `status.json` file with the current queue/task state.
 - Includes a Windows-only WinForms companion app that stays always on top.
 - Lets you hide the bar to the Windows tray while keeping live progress in the tooltip.

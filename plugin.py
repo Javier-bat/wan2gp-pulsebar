@@ -25,7 +25,7 @@ class PulsebarPlugin(WAN2GPPlugin):
     def __init__(self):
         super().__init__()
         self.name = "Pulsebar"
-        self.version = "0.1.0"
+        self.version = "0.1.1"
         self.description = "Windows floating always-on-top progress bar for Wan2GP."
 
         self._settings_lock = threading.Lock()
@@ -39,6 +39,8 @@ class PulsebarPlugin(WAN2GPPlugin):
         self._queue_update_wrapped = False
         self._global_queue_ref_update_wrapped = False
         self._original_generate_video = None
+        self._original_generation_fn = None
+        self._generation_global_name = None
         self._original_process_tasks = None
         self._original_update_queue_data = None
         self._original_update_global_queue_ref = None
@@ -49,6 +51,7 @@ class PulsebarPlugin(WAN2GPPlugin):
         self._bar_process = None
 
     def setup_ui(self):
+        self.request_global("generate_media")
         self.request_global("generate_video")
         self.request_global("get_gen_info")
         self.request_global("global_queue_ref")
@@ -65,7 +68,7 @@ class PulsebarPlugin(WAN2GPPlugin):
         self._install_process_tasks_wrapper_if_needed()
         self._install_queue_update_wrapper_if_needed()
         self._install_global_queue_ref_wrapper_if_needed()
-        self._install_generate_video_wrapper_if_needed()
+        self._install_generation_wrapper_if_needed()
         self._write_status(
             state="idle",
             percent=0,
@@ -153,26 +156,38 @@ class PulsebarPlugin(WAN2GPPlugin):
 
         return demo
 
-    def _install_generate_video_wrapper_if_needed(self):
+    def _select_generation_function(self):
+        for global_name in ("generate_media", "generate_video"):
+            generation_fn = getattr(self, global_name, None)
+            if callable(generation_fn):
+                return global_name, generation_fn
+        return None, None
+
+    def _install_generation_wrapper_if_needed(self):
         if self._wrapped:
             return
 
-        generate_video_fn = getattr(self, "generate_video", None)
-        if not callable(generate_video_fn):
+        generation_global_name, generation_fn = self._select_generation_function()
+        if not generation_global_name or not callable(generation_fn):
+            print("[Pulsebar] No compatible generation function found. Expected generate_media or generate_video.")
             return
 
-        if getattr(generate_video_fn, "_wan2gp_pulsebar_wrapped", False):
+        if getattr(generation_fn, "_wan2gp_pulsebar_wrapped", False):
             self._wrapped = True
-            self._original_generate_video = getattr(
-                generate_video_fn, "_wan2gp_pulsebar_original", generate_video_fn
+            self._generation_global_name = generation_global_name
+            self._original_generation_fn = getattr(
+                generation_fn, "_wan2gp_pulsebar_original", generation_fn
             )
+            self._original_generate_video = self._original_generation_fn
             return
 
-        original_fn = generate_video_fn
+        original_fn = generation_fn
+        self._generation_global_name = generation_global_name
+        self._original_generation_fn = original_fn
         self._original_generate_video = original_fn
 
         @functools.wraps(original_fn)
-        def wrapped_generate_video(task, send_cmd, *args, **kwargs):
+        def wrapped_generation(task, send_cmd, *args, **kwargs):
             state = kwargs.get("state")
             task_id = self._extract_task_id(task)
             queue_current, queue_total, queue_remaining = self._read_queue_progress(state)
@@ -237,11 +252,12 @@ class PulsebarPlugin(WAN2GPPlugin):
             self._mark_task_complete()
             return result
 
-        wrapped_generate_video.__signature__ = inspect.signature(original_fn)
-        wrapped_generate_video._wan2gp_pulsebar_wrapped = True
-        wrapped_generate_video._wan2gp_pulsebar_original = original_fn
+        wrapped_generation.__signature__ = inspect.signature(original_fn)
+        wrapped_generation._wan2gp_pulsebar_wrapped = True
+        wrapped_generation._wan2gp_pulsebar_original = original_fn
+        wrapped_generation._wan2gp_pulsebar_global_name = generation_global_name
 
-        self.set_global("generate_video", wrapped_generate_video)
+        self.set_global(generation_global_name, wrapped_generation)
         self._wrapped = True
 
     def _install_process_tasks_wrapper_if_needed(self):

@@ -1,9 +1,8 @@
 {
   "name": "Pulsebar",
   "author": "Javier-bat",
-  "version": "0.1.0",
-  "description": "Windows floating always-on-top progress bar for Wan2GP generations.",
+  "version": "0.1.1",
+  "description": "Windows floating always-on-top progress bar for Wan2GP generations, compatible with generate_media and generate_video Wan2GP versions.",
   "date": "",
   "wan2gp_version": ""
 }
-
